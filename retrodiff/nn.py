@@ -1,7 +1,6 @@
 import logging
 
-from retrodiff.dag import Dag, Node
-from retrodiff.fun import Function
+from .dag import Node, Function, Dag
 
 
 class NeuralNetwork:
