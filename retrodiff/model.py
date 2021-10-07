@@ -71,7 +71,7 @@ class Model:
             pred = self.evaluate(x)
             loss_tot += self.loss(pred, y)
 
-        return loss_tot / len(xs)
+        return loss_tot / len(inputs)
 
     def evaluate(self, inputs):
         self._dag.clear()

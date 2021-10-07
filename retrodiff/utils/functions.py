@@ -1,6 +1,6 @@
 import numpy as np
 
-from .dag import Function
+from ..dag import Function
 
 
 class Log(Function):
@@ -32,3 +32,8 @@ class Dot(Function):
     def backward(self, grad, wrt, a, b):
         if wrt == 0: return np.dot(grad, b.T)
         else: return np.dot(a.T, grad)
+
+class MSELoss(Function):
+    def forward(self, p, y): return np.sum((p - y)**2)
+    def backward(self, grad, wrt, p, y): return (1, -1)[wrt] * 2 * (y, p)[wrt]
+
