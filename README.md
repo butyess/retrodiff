@@ -1,6 +1,6 @@
 # Retrodiff
 
-Standalonoe reverse autodiff library.
+Standalone reverse autodiff library.
 
 ## Usage
 
