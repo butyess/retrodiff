@@ -7,5 +7,5 @@ class GradientDescent(Optimizer):
         self.lr = lr
 
     def new_param(self, old_param, grads):
-        return np.array(old_param) - np.array(grads) * self.lr
+        return [old - grad * self.lr for old, grad in zip(old_param, grads[1:])]
 

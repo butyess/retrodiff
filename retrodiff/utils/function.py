@@ -33,3 +33,7 @@ class Dot(Function):
         if wrt == 0: return np.dot(grad, b.T)
         else: return np.dot(a.T, grad)
 
+class ReLU(Function):
+    def forward(self, x): return np.maximum(x, 0)
+    def backward(self, grad, wrt, x): return (x > 0).astype(np.float) * grad
+

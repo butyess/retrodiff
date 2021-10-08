@@ -14,6 +14,7 @@ class Dag:
     def backward(self, output_grad):
         order = self.topo_sort(self.output_node)
         self.output_node.grad = output_grad
+
         for node in order:
             node.update_input_grads()
         return [n.grad for n in self.input_nodes]

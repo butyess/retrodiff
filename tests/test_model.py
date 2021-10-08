@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 
 from retrodiff import Dag, Function, Node
-from retrodiff.model import Model, Optimizer
-from retrodiff.utils.functions import Mul, MSELoss
+from retrodiff.model import Model
+from retrodiff.utils import Mul, MSELoss, GradientDescent
 
 
 PARAM = 10
@@ -12,17 +12,10 @@ PARAM = 10
 
 class SimpleModel(Model):
     def __init__(self):
+        super().__init__()
         self.parameters = [PARAM]
         a, x, mul = Node(), Node(), Mul()
         self._dag = Dag([a, x], mul(a, x))
-
-
-class GradientDescent(Optimizer):
-    def __init__(self, lr):
-        self.lr = lr
-
-    def new_param(self, old_param, grads):
-        return np.array(old_param) - np.array(grads) * self.lr
 
 
 class TestModel(unittest.TestCase):

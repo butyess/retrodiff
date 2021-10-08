@@ -45,7 +45,6 @@ class Model:
             raise ValueError("Cannot train without an optimizer")
 
         for i in range(n_iterations):
-            logging.info("Iteration %d", i)
             loss_tot = 0
 
             for x, y in zip(inputs, labels):
@@ -54,12 +53,13 @@ class Model:
                 loss_tot += self.loss(out, y)
 
                 # backward
-                loss_grad = self._loss_dag.backward(1) # loss should return a scalar, so 1 is ok
-                grads = self._dag.backward(loss_grad[0])
+                loss_grads = self._loss_dag.backward(1) # loss should return a scalar, so 1 is ok
+                grads = self._dag.backward(loss_grads[0])
 
                 # update parameters
                 self.parameters = self._optim.new_param(self.parameters, grads)
 
+            logging.info("Iteration %d", i)
             logging.info("Average loss: %d", loss_tot / len(inputs))
 
     def test(self, inputs, labels):
