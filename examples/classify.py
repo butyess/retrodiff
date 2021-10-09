@@ -8,7 +8,13 @@ from sklearn.datasets import make_moons
 
 from retrodiff import Dag, Node, Function
 from retrodiff.model import Model
-from retrodiff.utils import Dot, GradientDescent, ReLU, MSELoss
+from retrodiff.utils import Dot, Add, ReLU, MSELoss, GradientDescent
+
+add = Add()
+dot = Dot()
+
+Node.__add__ = lambda x, y: add(x, y)
+Node.__matmul__ = lambda x, y: dot(x, y)
 
 
 def plot(model, inputs, labels):
@@ -49,16 +55,28 @@ class Network(Model):
     def __init__(self, layers):
         super().__init__()
 
-        p = [Node() for _ in layers]
+        i = Node()
+        w = [Node() for _ in layers[1:]]
+        b = [Node() for _ in layers[1:]]
         pred, label = Node(), Node()
         dot, relu = Dot(), ReLU()
         loss = SVMBinaryLoss()
 
-        self._dag = Dag(p, dot(reduce(lambda x, y: relu(dot(x, y)), p[:-1]), p[-1]))
-        self._loss_dag = Dag([pred, label], loss(pred, label))
-        self._optim = GradientDescent(lr=0.001)
+        # self._dag = Dag(p, dot(reduce(lambda x, y: relu(x @ y), p[:-1]), p[-1]))
+        # fun = w[-1] @ reduce(lambda acc, x: relu((x[0] @ acc) + x[1]), zip(w[:-1], b[:-1]), i) + b[-1]
 
-        self.parameters = [np.random.normal(scale=20.0, size=dim) for dim in zip(layers[:-1], layers[1:])]
+        fun = relu(i @ w[0] + b[0])
+        for weight, bias in zip(w[1:-1], b[1:-1]):
+            fun = relu(fun @ weight + bias)
+        fun = fun @ w[-1] + b[-1]
+
+        self._dag = Dag([i] + w + b, fun)
+
+        self._loss_dag = Dag([pred, label], loss(pred, label))
+        self._optim = GradientDescent(lr=0.00001)
+
+        self.parameters = [np.random.normal(size=dim) for dim in zip(layers[:-1], layers[1:])] + \
+                          [np.random.normal(size=(1, n)) for n in layers[1:]]
 
 
 def main():
@@ -68,23 +86,16 @@ def main():
 
     inputs, labels = make_moons(n_samples=100, shuffle=True, noise=0.1)
 
-    cut = 75
-    batch_size = 20
-
-    x_train = [x.reshape(1, -1) for x in inputs[:cut]]
-    y_train = [y.reshape(1, -1) for y in labels[:cut]]
-
-    x_test = [x.reshape(1, -1) for x in inputs[cut:]]
-    y_test = [y.reshape(1, -1) for y in labels[cut:]]
+    x_train = [x.reshape(1, -1) for x in inputs]
+    y_train = [y.reshape(1, -1) for y in labels]
 
     for e in range(10):
-        ri = np.random.randint(0, len(x_train), size=batch_size)
-        model.train(10, [x_train[i] for i in ri], [y_train[i] for i in ri])
-        print('epoch ', e, 'avg loss: ', model.test(x_test, y_test))
+        model.train(10, x_train, y_train)
+        print('epoch ', e, 'avg loss: ', model.test(x_train, y_train))
 
-    pred = model.evaluate(x_test[0])
-    loss = model.loss(pred, y_test[0])
-    print('pred: ', pred, ' label: ', y_test[0], ' loss: ', loss)
+    # pred = model.evaluate(x_test[0])
+    # loss = model.loss(pred, y_test[0])
+    # print('pred: ', pred, ' label: ', y_test[0], ' loss: ', loss)
 
     plot(model, inputs, labels)
 
