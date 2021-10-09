@@ -1,6 +1,6 @@
 # Retrodiff
 
-Standalonoe reverse autodiff library.
+Standalone reverse autodiff library.
 
 ## Usage
 
@@ -28,3 +28,4 @@ out = dag.forward([1, 2, 3])
 grads = dag.backward(1)
 ```
 
+See also [examples](examples)
