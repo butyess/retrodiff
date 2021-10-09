@@ -57,7 +57,7 @@ class Model:
                 grads = self._dag.backward(loss_grads[0])
 
                 # update parameters
-                self.parameters = self._optim.new_param(self.parameters, grads)
+                self.parameters = self._optim.new_param(self.parameters, grads[1:])
 
             logging.info("Iteration %d", i)
             logging.info("Average loss: %d", loss_tot / len(inputs))
