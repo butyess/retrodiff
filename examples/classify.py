@@ -63,35 +63,36 @@ class Network(Model):
         loss = SVMBinaryLoss()
 
         # self._dag = Dag(p, dot(reduce(lambda x, y: relu(x @ y), p[:-1]), p[-1]))
-        # fun = w[-1] @ reduce(lambda acc, x: relu((x[0] @ acc) + x[1]), zip(w[:-1], b[:-1]), i) + b[-1]
 
-        fun = relu(i @ w[0] + b[0])
-        for weight, bias in zip(w[1:-1], b[1:-1]):
-            fun = relu(fun @ weight + bias)
-        fun = fun @ w[-1] + b[-1]
-
+        fun = reduce(lambda acc, x: relu((acc @ x[0]) + x[1]), zip(w[:-1], b[:-1]), i) @ w[-1] + b[-1]
         self._dag = Dag([i] + w + b, fun)
 
         self._loss_dag = Dag([pred, label], loss(pred, label))
-        self._optim = GradientDescent(lr=0.00001)
+        self._optim = GradientDescent(lr=0.01, mu=0.9)
 
-        self.parameters = [np.random.normal(size=dim) for dim in zip(layers[:-1], layers[1:])] + \
-                          [np.random.normal(size=(1, n)) for n in layers[1:]]
+        loc, scale = 0, 3
+
+        self.parameters = [np.random.normal(loc=loc, scale=scale, size=dim) for dim in zip(layers[:-1], layers[1:])] + \
+                          [np.random.normal(loc=loc, scale=scale, size=(1, n)) for n in layers[1:]]
 
 
 def main():
-    # logging.basicConfig(format="%(message)s", level=logging.INFO)
+    logging.basicConfig(format="%(message)s", level=logging.INFO)
 
-    model = Network([2, 16, 16, 2])
+    model = Network([2, 8, 8, 2])
 
     inputs, labels = make_moons(n_samples=100, shuffle=True, noise=0.1)
 
     x_train = [x.reshape(1, -1) for x in inputs]
     y_train = [y.reshape(1, -1) for y in labels]
 
-    for e in range(10):
-        model.train(10, x_train, y_train)
-        print('epoch ', e, 'avg loss: ', model.test(x_train, y_train))
+    x_test, y_test = make_moons(n_samples=100, shuffle=True, noise=0.1)
+    x_test = [x.reshape(1, -1) for x in x_test]
+    y_test = [y.reshape(1, -1) for y in y_test]
+
+    for e in range(1):
+        model.train(2, x_train, y_train)
+        print('epoch ', e, 'avg test loss: ', model.test(x_test, y_test))
 
     # pred = model.evaluate(x_test[0])
     # loss = model.loss(pred, y_test[0])
