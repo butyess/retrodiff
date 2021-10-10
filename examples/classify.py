@@ -68,9 +68,9 @@ class Network(Model):
         self._dag = Dag([i] + w + b, fun)
 
         self._loss_dag = Dag([pred, label], loss(pred, label))
-        self._optim = GradientDescent(lr=0.01, mu=0.9)
+        self._optim = GradientDescent(lr=0.01)
 
-        loc, scale = 0, 3
+        loc, scale = 0, 1
 
         self.parameters = [np.random.normal(loc=loc, scale=scale, size=dim) for dim in zip(layers[:-1], layers[1:])] + \
                           [np.random.normal(loc=loc, scale=scale, size=(1, n)) for n in layers[1:]]
@@ -79,9 +79,9 @@ class Network(Model):
 def main():
     logging.basicConfig(format="%(message)s", level=logging.INFO)
 
-    model = Network([2, 8, 8, 2])
+    model = Network([2, 16, 16, 2])
 
-    inputs, labels = make_moons(n_samples=100, shuffle=True, noise=0.1)
+    inputs, labels = make_moons(n_samples=1000, shuffle=True, noise=0.1)
 
     x_train = [x.reshape(1, -1) for x in inputs]
     y_train = [y.reshape(1, -1) for y in labels]
@@ -91,7 +91,7 @@ def main():
     y_test = [y.reshape(1, -1) for y in y_test]
 
     for e in range(1):
-        model.train(2, x_train, y_train)
+        model.train(100, x_train, y_train)
         print('epoch ', e, 'avg test loss: ', model.test(x_test, y_test))
 
     # pred = model.evaluate(x_test[0])
