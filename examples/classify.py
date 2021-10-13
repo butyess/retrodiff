@@ -40,13 +40,21 @@ class SVMBinaryLoss(Function):
         self.margin = margin
 
     def forward(self, preds, label):
-        return np.maximum(0, preds[:, int(not label)] - preds[:, label] + self.margin) / preds.shape[-1]
+        tot = 0
+        for i in range(preds.shape[1]):
+            if i != label:
+                tot += np.maximum(0, preds[0, i] - preds[0, label] + self.margin)
+        return tot / preds.shape[1]
 
     def backward(self, grad, wrt, preds, label):
         if wrt == 0:
-            pd = np.ones(preds.shape) / 2
-            pd[:, label] *= -1
-            return pd
+            pd = np.zeros(preds.shape)
+            for i in range(preds.shape[1]):
+                if i != label:
+                    if preds[0, i] + self.margin > preds[0, label]:
+                        pd[0, i] = 1
+                        pd[0, label] -= 1
+            return pd / preds.shape[1]
         else:
             return 0
 
@@ -62,26 +70,22 @@ class Network(Model):
         dot, relu = Dot(), ReLU()
         loss = SVMBinaryLoss()
 
-        # self._dag = Dag(p, dot(reduce(lambda x, y: relu(x @ y), p[:-1]), p[-1]))
-
         fun = reduce(lambda acc, x: relu((acc @ x[0]) + x[1]), zip(w[:-1], b[:-1]), i) @ w[-1] + b[-1]
         self._dag = Dag([i] + w + b, fun)
 
         self._loss_dag = Dag([pred, label], loss(pred, label))
-        self._optim = GradientDescent(lr=0.01)
+        self._optim = GradientDescent(lr=0.001)
 
-        loc, scale = 0, 1
-
-        self.parameters = [np.random.normal(loc=loc, scale=scale, size=dim) for dim in zip(layers[:-1], layers[1:])] + \
-                          [np.random.normal(loc=loc, scale=scale, size=(1, n)) for n in layers[1:]]
+        self.parameters = [np.random.normal(size=dim) for dim in zip(layers[:-1], layers[1:])] + \
+                          [np.random.normal(size=(1, n)) for n in layers[1:]]
 
 
 def main():
-    logging.basicConfig(format="%(message)s", level=logging.INFO)
+    # logging.basicConfig(format="%(message)s", level=logging.INFO)
 
     model = Network([2, 16, 16, 2])
 
-    inputs, labels = make_moons(n_samples=1000, shuffle=True, noise=0.1)
+    inputs, labels = make_moons(n_samples=100, shuffle=True, noise=0.1)
 
     x_train = [x.reshape(1, -1) for x in inputs]
     y_train = [y.reshape(1, -1) for y in labels]
@@ -90,13 +94,9 @@ def main():
     x_test = [x.reshape(1, -1) for x in x_test]
     y_test = [y.reshape(1, -1) for y in y_test]
 
-    for e in range(1):
-        model.train(100, x_train, y_train)
+    for e in range(10):
+        model.train(10, x_train, y_train)
         print('epoch ', e, 'avg test loss: ', model.test(x_test, y_test))
-
-    # pred = model.evaluate(x_test[0])
-    # loss = model.loss(pred, y_test[0])
-    # print('pred: ', pred, ' label: ', y_test[0], ' loss: ', loss)
 
     plot(model, inputs, labels)
 
