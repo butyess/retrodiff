@@ -6,16 +6,14 @@ import torch
 from torch.nn.functional import relu, multi_margin_loss
 from torch.optim import SGD
 
-from retrodiff.utils import GradientDescent
-
-from classify import Network, SVMBinaryLoss
+from retrodiff.utils import GradientDescent, SVMBinaryLossFun, NN, SVMBinaryLoss
 
 
 np.set_printoptions(precision=4)
 
 
-def just_loss():
-    loss_fn = SVMBinaryLoss()
+def loss():
+    loss_fn = SVMBinaryLossFun(1)
     out = np.array([[0, 10]])
     labl = np.array([0])
     loss = loss_fn.forward(out, labl)
@@ -27,7 +25,7 @@ def just_loss():
     loss_t.backward()
     grad_t = out_t.grad
 
-    print('Loss:')
+    print('Losses:')
     print(loss)
     print(loss_t)
     print('\nGrads:')
@@ -35,10 +33,10 @@ def just_loss():
     print(grad_t)
 
 
-def just_net():
+def net():
     layers = [2, 16, 1]
 
-    net = Network(layers)
+    net = NN(layers)
     x = np.array([[1, 2]])
     out = net.evaluate(x)
     grads = net._dag.backward(np.array([[1]]))
@@ -62,17 +60,18 @@ def just_net():
     print(diffs)
 
 
-def net_and_loss():
+def net_loss():
     x_init = [[0., 0.]]
     exp_init = [0]
     layers = [2, 8, 8, 2]
 
-    net = Network(layers)
+    net = NN(layers)
+    net.set_loss(SVMBinaryLoss())
     x = np.array(x_init, dtype=np.int)
     exp = np.array(exp_init)
     out = net.evaluate(x)
-    loss = net.loss(out, exp)
-    loss_grad = net._loss_dag.backward(1)
+    loss = net._loss.apply(out, exp)
+    loss_grad = net._loss.grads(1)
     grads = net._dag.backward(loss_grad[0])
 
     x_t = torch.tensor(x_init, dtype=torch.float, requires_grad=True)
@@ -110,17 +109,18 @@ def net_and_loss():
     print()
 
 
-def net_and_loss_optim():
+def net_loss_optim():
     x_init = [[0., 0.]]
     exp_init = [0]
     layers = [2, 8, 8, 2]
 
-    net = Network(layers)
+    net = NN(layers)
+    net.set_loss(SVMBinaryLoss())
     x = np.array(x_init, dtype=np.int)
     exp = np.array(exp_init)
     out = net.evaluate(x)
-    loss = net.loss(out, exp)
-    loss_grad = net._loss_dag.backward(1)
+    loss = net._loss.apply(out, exp)
+    loss_grad = net._loss.grads(1)
     grads = net._dag.backward(loss_grad[0])
 
     x_t = torch.tensor(x_init, dtype=torch.float, requires_grad=True)
@@ -161,8 +161,8 @@ def net_and_loss_optim():
 
     for i in range(10):
         out = net.evaluate(x)
-        loss = net.loss(out, exp)
-        loss_grad = net._loss_dag.backward(1)
+        loss = net._loss.apply(out, exp)
+        loss_grad = net._loss.grads(1)
         grads = net._dag.backward(loss_grad[0])
         net.parameters = optim.new_param(net.parameters, grads[1:])
 
@@ -198,7 +198,7 @@ def net_and_loss_optim():
         print()
 
 
-def just_optim():
+def optim():
     init_params = [100, 100, 100]
     init_grads = [1, 1, 1]
 
@@ -221,4 +221,4 @@ def just_optim():
 
 
 if __name__ == '__main__':
-    net_and_loss_optim()
+    optim()
