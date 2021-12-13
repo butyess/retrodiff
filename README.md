@@ -4,9 +4,9 @@ Standalone reverse autodiff library.
 
 ## Usage
 
-1.  Subclass `retrodiff.autodiff.Function` to create your custom functions and instantiate them.
-2.  Instantiate input `Node`s objects.
-3.  Create a `Dag` passing the input nodes and the function you want.
+1.  Subclass `retrodiff.Function` to create base functions (or use presets from `retrodiff.utils`).
+2.  Make the dag function by composing `Node`s and `Function`s.
+3.  Create a `Dag` by passing the input nodes and the function you just made.
 4.  Run `Dag.forward(*inputs)` and `Dag.backward()` to get output values and gradients.
 
 Example:
@@ -21,8 +21,9 @@ class Add(Function):
 
 mul, add = Mul(), Add()
 input_nodes = [Node(), Node(), Node()]
+f = add(mul(input_nodes[0], input_nodes[1]), input_nodes[2])
 
-dag = Dag(input_nodes, add(mul(input_nodes[0], input_nodes[1]), input_nodes[2]))
+dag = Dag(input_nodes, f)
 
 out = dag.forward([1, 2, 3])
 grads = dag.backward(1)
