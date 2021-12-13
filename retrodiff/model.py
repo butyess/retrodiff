@@ -47,8 +47,8 @@ class Model:
         return self._dag.forward(inputs + self.parameters)
 
     def train(self, n_iterations, inputs, labels):
-        assert hasattr(self, '_loss')
-        assert hasattr(self, '_optim')
+        assert self._loss is not None
+        assert self._optim is not None
 
         for i in range(n_iterations):
             loss_tot = 0
@@ -65,16 +65,16 @@ class Model:
                 # update parameters
                 self.parameters = self._optim.new_param(self.parameters, grads[1:])
 
-            logging.info("Iteration %d", i)
-            logging.info("Average loss: %d", loss_tot / len(inputs))
+            logging.debug("Iteration %d", i)
+            logging.debug("Average loss: %d", loss_tot / len(inputs))
 
     def test(self, inputs, labels):
-        assert hasattr(self, '_loss')
+        assert self._loss is not None
 
         loss_tot = 0
         for x, y in zip(inputs, labels):
             pred = self.evaluate(x)
-            loss_tot += self.loss(pred, y)
+            loss_tot += self._loss.apply(pred, y)
 
         return loss_tot / len(inputs)
 
