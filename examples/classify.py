@@ -6,15 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_moons
 
-from retrodiff import Dag, Node, Function
-from retrodiff.model import Model
-from retrodiff.utils import Dot, Add, ReLU, MSELoss, GradientDescent
-
-add = Add()
-dot = Dot()
-
-Node.__add__ = lambda x, y: add(x, y)
-Node.__matmul__ = lambda x, y: dot(x, y)
+from retrodiff.utils import GradientDescent, SVMBinaryLoss, NN
 
 
 def plot(model, inputs, labels):
@@ -35,55 +27,11 @@ def plot(model, inputs, labels):
     plt.show()
 
 
-class SVMBinaryLoss(Function):
-    def __init__(self, margin=1):
-        self.margin = margin
-
-    def forward(self, preds, label):
-        tot = 0
-        for i in range(preds.shape[1]):
-            if i != label:
-                tot += np.maximum(0, preds[0, i] - preds[0, label] + self.margin)
-        return tot / preds.shape[1]
-
-    def backward(self, grad, wrt, preds, label):
-        if wrt == 0:
-            pd = np.zeros(preds.shape)
-            for i in range(preds.shape[1]):
-                if i != label:
-                    if preds[0, i] + self.margin > preds[0, label]:
-                        pd[0, i] = 1
-                        pd[0, label] -= 1
-            return pd / preds.shape[1]
-        else:
-            return 0
-
-
-class Network(Model):
-    def __init__(self, layers):
-        super().__init__()
-
-        i = Node()
-        w = [Node() for _ in layers[1:]]
-        b = [Node() for _ in layers[1:]]
-        pred, label = Node(), Node()
-        dot, relu = Dot(), ReLU()
-        loss = SVMBinaryLoss()
-
-        fun = reduce(lambda acc, x: relu((acc @ x[0]) + x[1]), zip(w[:-1], b[:-1]), i) @ w[-1] + b[-1]
-        self._dag = Dag([i] + w + b, fun)
-
-        self._loss_dag = Dag([pred, label], loss(pred, label))
-        self._optim = GradientDescent(lr=0.001)
-
-        self.parameters = [np.random.normal(size=dim) for dim in zip(layers[:-1], layers[1:])] + \
-                          [np.random.normal(size=(1, n)) for n in layers[1:]]
-
-
 def main():
-    # logging.basicConfig(format="%(message)s", level=logging.INFO)
+    model = NN([2, 16, 16, 2])
 
-    model = Network([2, 16, 16, 2])
+    model.set_loss(SVMBinaryLoss())
+    model.set_optim(GradientDescent(lr=0.001))
 
     inputs, labels = make_moons(n_samples=100, shuffle=True, noise=0.1)
 

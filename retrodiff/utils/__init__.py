@@ -8,3 +8,4 @@ except ImportError:
 from .function import *
 from .loss import *
 from .optim import *
+from .nn import *
