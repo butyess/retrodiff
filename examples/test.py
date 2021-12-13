@@ -1,8 +1,7 @@
 import math
 
 from retrodiff import Node, Dag, Function
-
-from classify import Log, Exp, Mul, Add
+from retrodiff.utils import Log, Exp, Mul, Add
 
 log, exp, mul, add = Log(), Exp(), Mul(), Add()
 

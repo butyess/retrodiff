@@ -1,8 +1,15 @@
-import numpy as np
+from .. import Loss, Node, Dag
+from . import MSELossFun
 
-from ..dag import Function
 
-class MSELoss(Function):
-    def forward(self, p, y): return np.sum((p - y)**2)
-    def backward(self, grad, wrt, p, y): return (1, -1)[wrt] * 2 * (y, p)[wrt]
+class MSELoss(Loss):
+    def __init__(self):
+        super().__init__()
+        pred, labl, mse = Node(), Node(), MSELossFun()
+        self._dag = Dag([pred, labl], mse(pred, labl))
 
+    def apply(self, pred, labels):
+        return super().apply(pred, labels)
+
+    def grads(self, init_grad=1):
+        return super().grads(init_grad)

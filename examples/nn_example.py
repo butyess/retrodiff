@@ -1,64 +1,74 @@
 import logging
 
+from functools import reduce
+
 import numpy as np
 import matplotlib.pyplot as plt
 
-from retrodiff import Dag, Function, Node
-from retrodiff.nn import NeuralNetwork
+from retrodiff import Dag, Node, Model
+from retrodiff.utils import Dot, ReLU, Add, MSELoss, GradientDescent
 
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 
+dot = Dot()
+add = Add()
+relu = ReLU()
 
-class Mul(Function):
-    def forward(self, x, y): return x * y
-    def backward(self, grad, wrt, x, y): return grad * (y, x)[wrt]
-
-class Add(Function):
-    def forward(self, *values): return sum(values)
-    def backward(self, grad, wrt, *values): return grad
-
-class Sub(Function):
-    def forward(self, x, y): return x - y
-    def backward(self, grad, wrt, x, y): return grad * (1, -1)[wrt]
-
-class Square(Function):
-    def forward(self, x): return x ** 2
-    def backward(self, grad, wrt, x): return grad * 2 * x
+Node.__matmul__ = lambda x, y: dot(x, y)
+Node.__add__ = lambda x, y: add(x, y)
 
 
-class Neuron(NeuralNetwork):
-    def __init__(self):
+class NN(Model):
+    def __init__(self, layers, parameters=None, bias=True):
         super().__init__()
 
-        p = [Node(), Node(), Node(), Node()] # parameters
-        mul, add, square = Mul(), Add(), Square()
+        i = Node()
+        w = [Node() for _ in layers[1:]]
 
-        self._nn_dag = Dag(p, add(mul(square(p[0]), p[1]), mul(p[0], p[2]), p[3]))
-        self.weights = [0, 0, 0]
+        if bias:
+            b = [Node() for _ in layers[1:]] if bias else []
+            fun = reduce(lambda acc, x: relu((acc @ x[0]) + x[1]), zip(w[:-1], b[:-1]), i) @ w[-1] + b[-1]
+            self._dag = Dag([i] + w + b, fun)
+        else:
+            fun = reduce(lambda acc, x: relu(acc @ x), w[:-1], i) @ w[-1]
+            self._dag = Dag([i] + w, fun)
 
-
-def mse_loss():
-    pred, label = Node(), Node()
-    square, sub = Square(), Sub()
-    return Dag([pred, label], square(sub(pred, label)))
+        if parameters is None:
+            if bias:
+                self.parameters = [np.random.normal(size=dim) for dim in zip(layers[:-1], layers[1:])] + \
+                                  [np.random.normal(size=(1, n)) for n in layers[1:]]
+            else:
+                self.parameters = [np.random.normal(size=dim) for dim in zip(layers[:-1], layers[1:])]
+        else:
+            self.parameters = parameters
 
 
 def main():
-    model = Neuron()
-    model.set_loss(mse_loss())
+    model = NN([1, 2, 2, 1])
 
-    xs = np.random.uniform(low=-10, high=10, size=(100,))
-    ys = 2 * xs ** 2 + 3 * xs + 4
-    model.train(0.0001, 10, xs, ys)
+    logging.info("initial parameters: " + str(model.parameters))
 
-    tests = np.linspace(-5, 5)
-    vals = 2 * tests ** 2 + 3 * tests + 4
-    out = [model.evaluate(t) for t in tests]
+    model.set_loss(MSELoss())
+    model.set_optim(GradientDescent(lr=0.001))
+
+    f = lambda xs: 2 * xs ** 2
+
+    # train
+    inputs = list(np.linspace(-3, 3, 100))
+    labels = [f(i) for i in inputs]
+    model.train(100, inputs, labels)
+
+    logging.info("final parameters: " + str(model.parameters))
+
+    # test
+    xs = list(np.linspace(-5, 5))
+    ys = [f(x) for x in xs]
+    pred = [model.evaluate(x).flatten() for x in xs]
 
     fig, ax = plt.subplots()
-    ax.plot(tests, vals, 'r', label='actual value')
-    ax.plot(tests, out, 'bo', label='predicted value')
+    ax.plot(xs, ys, 'r', label='expected')
+    ax.plot(xs, pred, 'bo', label='predicted')
     fig.legend()
     plt.show()
 

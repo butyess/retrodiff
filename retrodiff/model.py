@@ -1,11 +1,23 @@
 import logging
 
-from .dag import Node, Function, Dag
+from . import Dag
 
 
 class Optimizer:
-    def new_param(old_param, grads):
+    def new_param(self, old_param, grads):
         raise NotImplementedError
+
+
+class Loss:
+    def __init__(self):
+        self._dag = None
+
+    def apply(self, pred, labels):
+        self._dag.clear()
+        return self._dag.forward([pred, labels])
+
+    def grads(self, init_grad=1):
+        return self._dag.backward(init_grad) # loss should return a scalar, so 1 is ok
 
 
 class Model:
@@ -17,32 +29,26 @@ class Model:
     def __init__(self):
         self.parameters = []
         self._dag = None
-        self._loss_dag = None
+        self._loss = None
         self._optim = None
-        pass
 
-    def set_loss(self, loss_dag):
-        '''
-        Sets the loss function for the model.
-        `loss_dag` output should be a scalar.
-        The loss function should accept two input, in this order:
-            1.  predicted values
-            2.  labels
-        '''
-        assert isinstance(loss_dag, Dag)
-        assert len(loss_dag.input_nodes) == 2
-        self._loss_dag = loss_dag
+    def set_loss(self, loss):
+        assert isinstance(loss, Loss)
+        self._loss = loss
 
     def set_optim(self, optim):
         assert isinstance(optim, Optimizer)
         self._optim = optim
 
-    def train(self, n_iterations, inputs, labels):
-        if self._loss_dag is None:
-            raise ValueError("Cannot train without a loss function")
+    def evaluate(self, inputs):
+        self._dag.clear()
+        if not isinstance(inputs, list):
+            inputs = [inputs]
+        return self._dag.forward(inputs + self.parameters)
 
-        if self._optim is None:
-            raise ValueError("Cannot train without an optimizer")
+    def train(self, n_iterations, inputs, labels):
+        assert hasattr(self, '_loss')
+        assert hasattr(self, '_optim')
 
         for i in range(n_iterations):
             loss_tot = 0
@@ -50,10 +56,10 @@ class Model:
             for x, y in zip(inputs, labels):
                 # forward
                 out = self.evaluate(x)
-                loss_tot += self.loss(out, y)
+                loss_tot += self._loss.apply(out, y)
 
                 # backward
-                loss_grads = self._loss_dag.backward(1) # loss should return a scalar, so 1 is ok
+                loss_grads = self._loss.grads()
                 grads = self._dag.backward(loss_grads[0])
 
                 # update parameters
@@ -63,8 +69,7 @@ class Model:
             logging.info("Average loss: %d", loss_tot / len(inputs))
 
     def test(self, inputs, labels):
-        if self._loss_dag is None:
-            raise ValueError("Cannot test without a loss function")
+        assert hasattr(self, '_loss')
 
         loss_tot = 0
         for x, y in zip(inputs, labels):
@@ -72,14 +77,4 @@ class Model:
             loss_tot += self.loss(pred, y)
 
         return loss_tot / len(inputs)
-
-    def evaluate(self, inputs):
-        self._dag.clear()
-        if not isinstance(inputs, list):
-            inputs = [inputs]
-        return self._dag.forward(inputs + self.parameters)
-
-    def loss(self, pred, expected):
-        self._loss_dag.clear()
-        return self._loss_dag.forward([pred, expected])
 

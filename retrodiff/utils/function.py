@@ -1,15 +1,15 @@
 import numpy as np
 
-from ..dag import Function
+from .. import Function
 
 
 class Log(Function):
-    def forward(self, x): return math.log(x)
+    def forward(self, x): return np.log(x)
     def backward(self, grad, wrt, x): return grad * (1/x)
 
 class Exp(Function):
-    def forward(self, x): return math.exp(x)
-    def backward(self, grad, wrt, x): return grad * math.exp(x)
+    def forward(self, x): return np.exp(x)
+    def backward(self, grad, wrt, x): return grad * np.exp(x)
 
 class Mul(Function):
     def forward(self, x, y): return x * y
@@ -36,4 +36,16 @@ class Dot(Function):
 class ReLU(Function):
     def forward(self, x): return np.maximum(x, 0)
     def backward(self, grad, wrt, x): return (x > 0).astype(np.float) * grad
+
+class MSELossFun(Function):
+    def forward(self, p, y): return np.sum((p - y)**2)
+    def backward(self, grad, wrt, p, y): return (1, -1)[wrt] * 2 * (p - y) * grad
+
+class Max(Function):
+    def forward(self, x, y): return np.maximum(x, y)
+    def backward(self, grad, wrt, x, y):
+        if x > y:
+            return grad * (not wrt)
+        else:
+            return grad * wrt
 

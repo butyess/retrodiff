@@ -11,9 +11,9 @@ class Dag:
             node.value = val
         return self.output_node.value
 
-    def backward(self, output_grad):
+    def backward(self, first_grad):
         order = self.topo_sort(self.output_node)
-        self.output_node.grad = output_grad
+        self.output_node.grad = first_grad
 
         for node in order:
             node.update_input_grads()
@@ -91,4 +91,3 @@ class Function:
 
     def __call__(self, *args):
         return Node(function=self, input_nodes=list(args))
-
