@@ -13,7 +13,7 @@ def main():
     # logging.basicConfig(format="%(message)s", level=logging.DEBUG)
     model = NN([1, 2, 2, 1])
 
-    logging.info("initial parameters: " + str(model.parameters))
+    print("initial parameters: " + str(model.parameters))
 
     model.set_loss(MSELoss())
     model.set_optim(GradientDescent(lr=0.001))
@@ -25,7 +25,7 @@ def main():
     labels = [f(i) for i in inputs]
     model.train(100, inputs, labels)
 
-    logging.info("final parameters: " + str(model.parameters))
+    print("final parameters: " + str(model.parameters))
 
     # test
     xs = list(np.linspace(-5, 5))
