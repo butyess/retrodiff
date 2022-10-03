@@ -4,10 +4,14 @@ Standalone reverse autodiff library.
 
 ## Usage
 
-1.  Subclass `retrodiff.Function` to create base functions (or use presets from `retrodiff.utils`).
+### Dag api
+
+1.  Subclass `retrodiff.Function` to create base functions (or use presets from `retrodiff.utils.function`).
 2.  Make the dag function by composing `Node`s and `Function`s.
-3.  Create a `Dag` by passing the input nodes and the function you just made.
-4.  Run `Dag.forward(*inputs)` and `Dag.backward()` to get output values and gradients.
+3.  Set values on input nodes.
+4.  Call `node.forward()` and `node.backward()` on the output node to calulate output values and gradients.
+5.  Gradients and valuesa are stored in `node.grad` and in `node.value`.
+    You can also see the full function with `node.show_tree()`.
 
 Example:
 ```python
@@ -20,13 +24,22 @@ class Add(Function):
     def backward(self, grad, wrt, x, y): return grad
 
 mul, add = Mul(), Add()
-input_nodes = [Node(), Node(), Node()]
-f = add(mul(input_nodes[0], input_nodes[1]), input_nodes[2])
+x, y, z = (Node(), Node(), Node())
+f = add(mul(x, y), z)
 
-dag = Dag(input_nodes, f)
+x.value = 2
+y.value = 3
+z.value = 1
 
-out = dag.forward([1, 2, 3])
-grads = dag.backward(1)
+f.forward()
+f.backward(1)
+
+out = f.value
+grads = x.grad, y.grad, z.grad, f.grad
 ```
 
-See also [examples](examples)
+See also the [examples](examples).
+
+### Models api
+
+See `retrodiff.utils.nn`.
