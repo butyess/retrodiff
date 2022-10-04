@@ -1,6 +1,31 @@
-from socket import if_nameindex
-from retrodiff.utils.nn import Linear, Sequential, Recurrent
-from retrodiff.utils.function import ReLU, Mul, Add
+from retrodiff.utils.nn import Linear, Sequential, Recurrent, Loss, Linear
+from retrodiff.utils.function import ReLU, Mul, Add, MSELossFun
+from retrodiff.utils.optim import GradientDescent
+
+import numpy as np
+
+
+def loss_optim():
+    mse = MSELossFun()
+    relu = ReLU()
+
+    net = Sequential(Linear(relu, np.array(2.0), np.array(0.0)),
+                    Linear(relu, np.array(3.0), np.array(0.0)))
+    loss = Loss(mse, net)
+
+    l = loss.forward(np.array(1.0), np.array(5.0))
+    loss.backward()
+
+    print('before:')
+    print(', '.join(map(str, net.weights)))
+
+    optim = GradientDescent(net, 1)
+    optim.step()
+
+    print('\nafter:')
+    print(', '.join(map(str, net.weights)))
+
+    print(l)
 
 
 def lin_seq():
@@ -38,3 +63,4 @@ def rnn():
 if __name__ == '__main__':
     lin_seq()
     rnn()
+    loss_optim()
