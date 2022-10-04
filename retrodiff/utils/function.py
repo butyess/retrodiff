@@ -23,6 +23,11 @@ class Add(Function):
     def backward(self, grad, wrt, *values): return grad
 
 
+class NpAdd(Function):
+    def forward(self, a, b): return np.add(a, b)
+    def backward(self, grad, wrt, *values): return grad
+
+
 class Sub(Function):
     def forward(self, x, y): return x - y
     def backward(self, grad, wrt, x, y): return grad * (1, -1)[wrt]

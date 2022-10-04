@@ -1,7 +1,7 @@
 import numpy as np
 
 from .. import Node
-from .function import Dot, Add, ReLU
+from .function import Dot, NpAdd
 
 
 class Model:
@@ -49,6 +49,23 @@ class Model:
         self._weights = ws
 
 
+class Loss:
+    def __init__(self, fn, model):
+        self.pred = Node()
+        self.dag = fn(self.pred, *model.output_nodes)
+        self.model = model
+    
+    def forward(self, xs, p):
+        self.model.run(xs)
+
+        self.pred.value = p
+        self.dag.forward()
+        return self.dag.value
+
+    def backward(self):
+        self.dag.backward(1)
+
+
 class Sequential(Model):
     def __init__(self, *modules):
         self.modules = modules
@@ -70,12 +87,14 @@ class Sequential(Model):
 
 
 class Linear(Model):
-    def __init__(self, activation_fn):
+    def __init__(self, activation_fn, w=None, b=None):
         self.activation_fn = activation_fn
         super().__init__(mutable=False)
+        if w is not None and b is not None:
+            self.weights = [w, b]
 
     def build_dag(self):
-        dot, add, relu = Dot(), Add(), ReLU()
+        dot, add = Dot(), NpAdd()
         x, w, b = Node(), Node(), Node()
         f = self.activation_fn(add(dot(x, w), b))
 
